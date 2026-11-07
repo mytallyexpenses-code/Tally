@@ -26,7 +26,6 @@ export function NewProjectForm({ companyId, currency }: { companyId: string; cur
       return;
     }
     router.push(`/projects/${r.id}`);
-    router.refresh();
   }
 
   return (

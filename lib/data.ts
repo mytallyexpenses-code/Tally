@@ -44,8 +44,8 @@ export interface Entry {
 /** Every expense and every top-up, newest first. */
 export async function getHistory(companyId: string, projectId?: string): Promise<Entry[]> {
   const db = createAdminClient();
-  let fq = db.from('funding').select('id, amount, created_at, note, proof_path, proof_name, project_id, created_by, method, reference').eq('company_id', companyId);
-  let eq = db.from('expenses').select('id, title, amount, created_at, note, project_id, submitted_by, expense_files(path, name)').eq('company_id', companyId);
+  let fq = db.from('funding').select('id, amount, created_at, note, proof_path, proof_name, project_id, created_by, method, reference').eq('company_id', companyId).order('created_at', { ascending: false }).limit(200);
+  let eq = db.from('expenses').select('id, title, amount, created_at, note, project_id, submitted_by, expense_files(path, name)').eq('company_id', companyId).order('created_at', { ascending: false }).limit(200);
   if (projectId) {
     fq = fq.eq('project_id', projectId);
     eq = eq.eq('project_id', projectId);
@@ -59,15 +59,8 @@ export async function getHistory(companyId: string, projectId?: string): Promise
   const who = new Map((people ?? []).map((p) => [p.id as string, p.full_name as string]));
   const proj = new Map((projects ?? []).map((p) => [p.id as string, p.name as string]));
 
-  const paths = [
-    ...(funds ?? []).map((f) => f.proof_path as string),
-    ...(expenses ?? []).flatMap((e) => ((e.expense_files as { path: string }[]) ?? []).map((x) => x.path))
-  ].filter(Boolean);
-  const signed = new Map<string, string>();
-  if (paths.length) {
-    const { data } = await db.storage.from('proofs').createSignedUrls(paths, 3600);
-    (data ?? []).forEach((s) => s.path && s.signedUrl && signed.set(s.path, s.signedUrl));
-  }
+  // Proof links point at /proof, which signs the file only when it is clicked (no storage round trip while listing).
+  const link = (path: string) => `/proof?path=${encodeURIComponent(path)}`;
 
   const entries: Entry[] = [
     ...(funds ?? []).map((f) => ({
@@ -80,7 +73,7 @@ export async function getHistory(companyId: string, projectId?: string): Promise
       projectName: proj.get(f.project_id as string) ?? '—',
       by: who.get(f.created_by as string) ?? '—',
       note: f.note === 'Opening budget' ? null : (f.note as string | null),
-      files: f.proof_path ? [{ name: (f.proof_name as string) || 'Proof', url: signed.get(f.proof_path as string) ?? null }] : []
+      files: f.proof_path ? [{ name: (f.proof_name as string) || 'Proof', url: link(f.proof_path as string) }] : []
     })),
     ...(expenses ?? []).map((e) => ({
       id: e.id as string,
@@ -92,8 +85,19 @@ export async function getHistory(companyId: string, projectId?: string): Promise
       projectName: proj.get(e.project_id as string) ?? '—',
       by: who.get(e.submitted_by as string) ?? '—',
       note: e.note as string | null,
-      files: ((e.expense_files as { path: string; name: string }[]) ?? []).map((x) => ({ name: x.name, url: signed.get(x.path) ?? null }))
+      files: ((e.expense_files as { path: string; name: string }[]) ?? []).map((x) => ({ name: x.name, url: link(x.path) }))
     }))
   ];
   return entries.sort((a, b) => (a.at < b.at ? 1 : -1));
+}
+
+export async function getProject(companyId: string, id: string): Promise<ProjectRow | null> {
+  const db = createAdminClient();
+  const [{ data: p }, { data: s }] = await Promise.all([
+    db.from('projects').select('id, code, name, budget').eq('company_id', companyId).eq('id', id).maybeSingle(),
+    db.from('project_stats').select('spent, held').eq('company_id', companyId).eq('project_id', id).maybeSingle()
+  ]);
+  if (!p) return null;
+  const spent = num(s?.spent) + num(s?.held);
+  return { id: p.id, code: p.code, name: p.name, budget: num(p.budget), spent, remaining: num(p.budget) - spent };
 }

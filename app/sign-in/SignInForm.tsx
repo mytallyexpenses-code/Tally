@@ -23,8 +23,7 @@ export function SignInForm({ initialError }: { initialError: string | null }) {
       return;
     }
     await supabase.rpc('record_sign_in', { p_source: 'Web' });
-    router.replace('/');
-    router.refresh();
+    router.replace('/projects');
   }
 
   return (

@@ -31,7 +31,6 @@ export function FundsForm({
       return;
     }
     router.push(`/projects/${project}`);
-    router.refresh();
   }
 
   return (

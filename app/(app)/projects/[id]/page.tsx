@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { HistoryList } from '@/components/HistoryList';
 import { pct, tone } from '@/components/ProjectCard';
-import { getHistory, getProjects } from '@/lib/data';
+import { getHistory, getProject } from '@/lib/data';
 import { money } from '@/lib/format';
 import { isAdminRole, requireMember } from '@/lib/session';
 
@@ -13,9 +13,8 @@ export const dynamic = 'force-dynamic';
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { profile, company } = await requireMember();
-  const project = (await getProjects(company.id)).find((p) => p.id === id);
+  const [project, history] = await Promise.all([getProject(company.id, id), getHistory(company.id, id)]);
   if (!project) notFound();
-  const history = await getHistory(company.id, id);
   const admin = isAdminRole(profile.role);
   const cur = company.currency;
 

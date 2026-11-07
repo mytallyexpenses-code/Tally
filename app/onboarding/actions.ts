@@ -10,5 +10,5 @@ export async function createWorkspace(_prev: unknown, form: FormData) {
     p_full_name: String(form.get('full_name') ?? '').trim()
   });
   if (error) return { error: error.message };
-  redirect('/overview');
+  redirect('/');
 }

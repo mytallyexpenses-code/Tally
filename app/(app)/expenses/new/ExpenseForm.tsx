@@ -41,7 +41,6 @@ export function ExpenseForm({
       return;
     }
     router.push(`/projects/${project}`);
-    router.refresh();
   }
 
   return (
@@ -70,7 +69,7 @@ export function ExpenseForm({
         <label>Proof</label>
         <ProofPicker companyId={companyId} folder="expenses" value={file} onChange={setFile} hint="Add the receipt or a photo" />
       </div>
-      <div className="stamp">🕒 Date &amp; time: <b>{now ?? '…'}</b></div>
+      <div className="stamp">Date &amp; time: <b>{now ?? '…'}</b></div>
       {error ? <div role="alert" className="alert">{error}</div> : null}
       <button className="btn primary lg" disabled={busy}>{busy ? 'Saving…' : 'Save expense'}</button>
     </form>

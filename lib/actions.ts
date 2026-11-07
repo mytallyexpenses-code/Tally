@@ -7,7 +7,11 @@ import { isAdminRole, requireMember } from '@/lib/session';
 type Result = { error?: string; id?: string };
 type File = { path: string; name: string; size: number };
 
-const refresh = () => revalidatePath('/', 'layout');
+const refresh = () => {
+  revalidatePath('/projects');
+  revalidatePath('/history');
+  revalidatePath('/projects/[id]', 'page');
+};
 
 /** Anyone in the workspace (admins included) can record an expense. Counts against the budget straight away. */
 export async function addExpense(p: { project_id: string; title: string; amount: number; note: string; file: File | null }): Promise<Result> {
@@ -32,11 +36,13 @@ export async function addExpense(p: { project_id: string; title: string; amount:
     .single();
   if (error || !exp) return { error: error?.message ?? 'Could not save.' };
 
-  await db.from('expense_files').insert({ expense_id: exp.id, company_id: profile.company_id, path: p.file.path, name: p.file.name, size: p.file.size });
-  await db.from('audit_log').insert({
+  await Promise.all([
+    db.from('expense_files').insert({ expense_id: exp.id, company_id: profile.company_id, path: p.file.path, name: p.file.name, size: p.file.size }),
+    db.from('audit_log').insert({
     company_id: profile.company_id, actor_id: user.id, kind: 'money', ref: exp.ref, source: 'Web',
     text: `Added expense ${p.title.trim()} · ${p.amount} on ${project.name}`
-  });
+    })
+  ]);
   refresh();
   return { id: project.id };
 }
