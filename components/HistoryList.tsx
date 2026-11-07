@@ -1,3 +1,4 @@
+import { ProofLink } from '@/components/ProofLink';
 import { money, stamp } from '@/lib/format';
 import type { Entry } from '@/lib/data';
 
@@ -18,7 +19,7 @@ export function HistoryList({ items, currency, tz, showProject }: { items: Entry
             {e.files.length ? (
               <div className="small">
                 {e.files.map((f, i) =>
-                  f.url ? <a key={i} href={f.url} target="_blank" rel="noreferrer" className="proof">{f.name}</a> : <span key={i} className="muted">{f.name}</span>
+                  f.url ? <ProofLink key={i} name={f.name} url={f.url} /> : <span key={i} className="muted">{f.name}</span>
                 )}
               </div>
             ) : null}
