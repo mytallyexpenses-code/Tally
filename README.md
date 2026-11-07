@@ -103,3 +103,20 @@ Company defaults live in *Settings*; each project can override them on its *Rule
 - Push / email notifications — the preferences are saved in *Settings*, but nothing sends them yet.
 - Reading receipt totals automatically (OCR). Approvers compare the receipt image with the claim.
 - "Export receipts (ZIP)". CSV exports are available on projects, ledgers, expenses, budget changes and the audit log; the Reports "PDF" uses the browser's print-to-PDF.
+
+## Automated deployment (GitHub Actions)
+
+Every push to `master` runs [`deploy.yml`](.github/workflows/deploy.yml): typecheck + build → `supabase db push` (new files in `supabase/migrations/`) → Vercel production deploy. Pull requests run [`ci.yml`](.github/workflows/ci.yml) only.
+
+One-time setup — add these under GitHub → Settings → Secrets and variables → Actions:
+
+| Secret | Where to get it |
+| --- | --- |
+| `SUPABASE_ACCESS_TOKEN` | supabase.com/dashboard/account/tokens |
+| `SUPABASE_DB_PASSWORD` | the database password you set when creating the project |
+| `SUPABASE_PROJECT_REF` | Project Settings → General (the ref in the project URL) |
+| `VERCEL_TOKEN` | vercel.com/account/tokens |
+| `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | run `npx vercel link` locally, then read `.vercel/project.json` |
+
+The app's own env vars (`NEXT_PUBLIC_SUPABASE_URL`, etc.) stay in the Vercel project settings. If you use Vercel's built-in Git integration, disable it (or delete the `deploy` job) so you don't deploy twice.
+To change the database, add a new migration file (`npx supabase migration new <name>`) — never edit an applied one.
